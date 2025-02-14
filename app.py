@@ -2,6 +2,7 @@ from flask import Flask, redirect, request, url_for, render_template,session
 import spotipy
 from spotipy.oauth2 import SpotifyOAuth
 
+
 #le tue credenziali le trovi nella dashboard di prima
 SPOTIFY_CLIENT_ID = "f8c2cc355fbe4afcb4eb8073cfbc2266"
 SPOTIFY_CLIENT_SECRET = "d74c18dff1f14efba2ec5ec59384b363"
@@ -15,7 +16,7 @@ sp_oauth = SpotifyOAuth(
     client_id=SPOTIFY_CLIENT_ID,
     client_secret=SPOTIFY_CLIENT_SECRET,
     redirect_uri=SPOTIFY_REDIRECT_URI,
-    scope="user-read-private" #permessi x informazioni dell'utente
+    scope="user-read-private"
 )
 #config SpotifyOAuth per l'autenticazione e redirect uri
 sp_oauth = SpotifyOAuth(
@@ -25,7 +26,6 @@ sp_oauth = SpotifyOAuth(
     scope="user-read-private", #permessi x informazioni dell'utente
     show_dialog=True #forziamo la richiesta di inserire new credenziali
 )
-
 @app.route('/')
 def login():
     auth_url = sp_oauth.get_authorize_url() #login di spotify
@@ -37,7 +37,6 @@ def callback():
     token_info = sp_oauth.get_access_token(code) #uso il code per un codice di accesso
     session['token_info'] = token_info #salvo il token nella mia sessione x riutilizzarlo
     return redirect(url_for('home'))
-
 @app.route('/home')
 def home():
     token_info = session.get('token_info', None) #recupero token sissione (salvato prima)
@@ -50,11 +49,22 @@ def home():
     print(user_info) #capiamo la struttura di user_info per usarle nel frontend
     return render_template('home.html', user_info=user_info, playlists=playlists_info) #passo le info utente all'home.html
 
+@app.route('/playlist/<playlist_id>')
+def playlist_tracks(playlist_id):
+    token_info = session.get('token_info', None)
+
+    sp = spotipy.Spotify(auth=token_info['access_token'])
+
+    # Recupera i brani della playlist
+    results = sp.playlist_tracks(playlist_id)
+    tracks = results['items']
+   
+    return render_template('playlist_tracks.html', tracks=tracks)
 @app.route('/logout')
 def logout():
     session.clear() #cancelliamo l'access token salvato in session
     return redirect(url_for('login'))
+    
 
-#avvio dell'app Flask
 if __name__ == '__main__':
     app.run(debug=True)
